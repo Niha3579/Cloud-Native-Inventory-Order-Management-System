@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # 1. Relational Database (MySQL)
+  mysql_db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: inventory_db
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app_network
+
+  # 2. NoSQL Database (MongoDB)
+  mongo_db:
+    image: mongo:latest
+    container_name: mongo_db
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app_network
+
+  # 3. FastAPI Backend
+  backend:
+    build: .
+    container_name: fastapi_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      # Notice we use the service name 'mysql_db' and 'mongo_db' as the host here!
+      - MYSQL_URL=mysql+pymysql://myuser:mypassword@mysql_db:3306/inventory_db
+      - MONGO_URL=mongodb://mongo_db:27017/
+    depends_on:
+      - mysql_db
+      - mongo_db
+    networks:
+      - app_network
+
+# Define persistent volumes
+volumes:
+  mysql_data:
+  mongo_data:
+
+# Define custom network for container communication
+networks:
+  app_network:
+    driver: bridge
